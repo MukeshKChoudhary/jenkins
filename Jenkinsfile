@@ -1,51 +1,56 @@
 pipeline {
-
-    agent any
-    
-    environment {
-        PASS = credentials('registry-pass') 
-    }
-
-    stages {
-
+  agent any
+  stages {
+    stage('Build') {
+      parallel {
         stage('Build') {
-            steps {
-                sh '''
+          post {
+            success {
+              archiveArtifacts(artifacts: 'java-app/target/*.jar', fingerprint: true)
+            }
+
+          }
+          steps {
+            sh '''
                     ./jenkins/build/mvn.sh mvn -B -DskipTests clean package
                     ./jenkins/build/build.sh
 
                 '''
-            }
-
-            post {
-                success {
-                   archiveArtifacts artifacts: 'java-app/target/*.jar', fingerprint: true
-                }
-            }
+          }
         }
 
-        stage('Test') {
-            steps {
-                sh './jenkins/test/mvn.sh mvn test'
-            }
-
-            post {
-                always {
-                    junit 'java-app/target/surefire-reports/*.xml'
-                }
-            }
+        stage('') {
+          steps {
+            echo 'Hello Mukesh'
+          }
         }
 
-        stage('Push') {
-            steps {
-                sh './jenkins/push/push.sh'
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh './jenkins/deploy/deploy.sh'
-            }
-        }
+      }
     }
+
+    stage('Test') {
+      post {
+        always {
+          junit 'java-app/target/surefire-reports/*.xml'
+        }
+
+      }
+      steps {
+        sh './jenkins/test/mvn.sh mvn test'
+      }
+    }
+
+    stage('Push') {
+      steps {
+        sh './jenkins/push/push.sh'
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        sh './jenkins/deploy/deploy.sh'
+      }
+    }
+
+  }
 }
